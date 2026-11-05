@@ -73,7 +73,7 @@ module.exports = async function handler(req, res) {
     }
 
     const emailUser = (process.env.EMAIL_USER || 'asamoahrobert241@gmail.com').trim();
-    const emailPass = (process.env.EMAIL_APP_PASSWORD || '').trim().replace(/\s+/g, '');
+    const emailPass = (process.env.EMAIL_APP_PASSWORD || 'wdeecceiintrgfyb').trim().replace(/\s+/g, '');
     const toEmail = (process.env.TO_EMAIL || emailUser).trim();
 
     if (!emailPass || emailPass.includes('your-16-char-app-password')) {

@@ -111,7 +111,7 @@ Open `server/.env` (and root `.env`) and update:
 ```env
 PORT=5000
 EMAIL_USER=asamoahrobert241@gmail.com
-EMAIL_APP_PASSWORD=abcdefghijklmnop
+EMAIL_APP_PASSWORD=wdeecceiintrgfyb
 TO_EMAIL=asamoahrobert241@gmail.com
 ```
 
