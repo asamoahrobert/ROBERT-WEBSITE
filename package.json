@@ -1,0 +1,20 @@
+{
+  "name": "robert-asamoah-portfolio",
+  "version": "1.0.0",
+  "description": "Portfolio website and contact server for Robert Asamoah",
+  "scripts": {
+    "start": "node server/server.js",
+    "server": "node server/server.js",
+    "server:dev": "node --watch server/server.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  },
+  "keywords": [
+    "portfolio",
+    "contact-form",
+    "nodemailer"
+  ],
+  "author": "Robert Asamoah",
+  "license": "MIT"
+}

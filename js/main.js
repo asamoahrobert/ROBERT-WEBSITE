@@ -11,13 +11,32 @@ import { initTheme, setupThemeToggles } from './theme.js';
 
 /**
  * CONFIGURATION & ENDPOINTS
- * REPLACE with your personal info or Formspree endpoint when ready!
+ * Dynamically resolves the contact form API endpoint:
+ * 1. window.CONTACT_API_URL (configurable in js/config.js or HTML)
+ * 2. form action attribute
+ * 3. Default to Web3Forms API: https://api.web3forms.com/submit
  */
-const CONFIG = {
-  // Formspree or Web3Forms endpoint:
-  // e.g. "https://formspree.io/f/my-form-id" or "https://api.web3forms.com/submit"
-  formEndpoint: "https://formspree.io/f/your-form-id",
-};
+function getContactApiUrl(form) {
+  if (typeof window !== 'undefined' && window.CONTACT_API_URL && window.CONTACT_API_URL.trim() !== '') {
+    return window.CONTACT_API_URL.trim();
+  }
+  if (typeof window !== 'undefined' && window.__ENV__?.CONTACT_API_URL) {
+    return window.__ENV__.CONTACT_API_URL.trim();
+  }
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1' &&
+    window.location.protocol !== 'file:'
+  ) {
+    return '/api/contact';
+  }
+  if (form && form.getAttribute('action') && form.getAttribute('action').trim() !== '') {
+    return form.getAttribute('action').trim();
+  }
+  return 'http://localhost:5000/api/contact';
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Initialize Theme (Dark/Light)
@@ -302,8 +321,9 @@ function setupContactForm() {
   const successBanner = document.getElementById('form-success');
   const errorBanner = document.getElementById('form-error');
   const errorText = document.getElementById('form-error-text');
+  const successText = document.getElementById('form-success-text');
 
-  // Real-time blur validation
+  // Real-time blur and input validation
   [nameInput, emailInput, messageInput].forEach((input) => {
     input.addEventListener('blur', () => validateField(input));
     input.addEventListener('input', () => {
@@ -317,31 +337,41 @@ function setupContactForm() {
     const errorEl = document.getElementById(`${input.id}-error`);
     let isValid = true;
     let message = '';
+    const value = input.value.trim();
 
     if (input.id === 'name') {
-      if (!input.value.trim()) {
+      if (!value) {
         isValid = false;
         message = 'Please enter your name.';
-      } else if (input.value.trim().length < 2) {
+      } else if (value.length < 2) {
         isValid = false;
         message = 'Name must be at least 2 characters.';
+      } else if (value.length > 100) {
+        isValid = false;
+        message = 'Name cannot exceed 100 characters.';
       }
     } else if (input.id === 'email') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!input.value.trim()) {
+      if (!value) {
         isValid = false;
         message = 'Please enter your email address.';
-      } else if (!emailRegex.test(input.value.trim())) {
+      } else if (!emailRegex.test(value)) {
         isValid = false;
         message = 'Please provide a valid email address.';
+      } else if (value.length > 254) {
+        isValid = false;
+        message = 'Email address is too long.';
       }
     } else if (input.id === 'message') {
-      if (!input.value.trim()) {
+      if (!value) {
         isValid = false;
         message = 'Please enter your message.';
-      } else if (input.value.trim().length < 10) {
+      } else if (value.length < 10) {
         isValid = false;
         message = 'Message must be at least 10 characters.';
+      } else if (value.length > 3000) {
+        isValid = false;
+        message = 'Message cannot exceed 3000 characters.';
       }
     }
 
@@ -366,7 +396,7 @@ function setupContactForm() {
     return isValid;
   }
 
-  // Handle Form Submission
+  // Handle Form Submission (Submits to Web3Forms without reloading the page)
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -375,67 +405,113 @@ function setupContactForm() {
     const isMessageValid = validateField(messageInput);
 
     if (!isNameValid || !isEmailValid || !isMessageValid) {
+      const firstInvalid = [nameInput, emailInput, messageInput].find(
+        (input) => input.getAttribute('aria-invalid') === 'true'
+      );
+      if (firstInvalid) firstInvalid.focus();
       return;
     }
 
-    // Set Loading State
-    const originalBtnText = submitBtn.innerHTML;
+    // Anti-bot check
+    const botcheckInput = form.querySelector('input[name="botcheck"]');
+    if (botcheckInput && botcheckInput.checked) {
+      // Silently treat as sent for bot
+      successBanner.classList.remove('hidden');
+      form.reset();
+      return;
+    }
+
+    // Set Loading State (Disable button and show "Sending...")
+    const originalBtnHtml = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = `
       <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
       </svg>
-      Sending Message...
+      Sending...
     `;
 
     successBanner.classList.add('hidden');
     errorBanner.classList.add('hidden');
 
-    const formData = {
+    const apiUrl = getContactApiUrl(form);
+
+    // Build form payload
+    const payload = {
       name: nameInput.value.trim(),
       email: emailInput.value.trim(),
       message: messageInput.value.trim(),
     };
 
+    // Include anti-spam honeypot if present
+    const gotchaInput = form.querySelector('input[name="_gotcha"]');
+    if (gotchaInput && gotchaInput.value) {
+      payload._gotcha = gotchaInput.value;
+    }
+
     try {
-      // Check if endpoint is still default placeholder
-      const isPlaceholder = !CONFIG.formEndpoint || CONFIG.formEndpoint.includes('your-form-id');
-
-      if (isPlaceholder) {
-        // Simulated submission mode
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        successBanner.classList.remove('hidden');
-        form.reset();
-        return;
-      }
-
-      // Live submission
-      const res = await fetch(CONFIG.formEndpoint, {
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+
+      // Strictly verify that status is 200 AND data.success is true
+      if (res.ok && data.success === true) {
+        // Show success message ONLY when the email actually sends
         successBanner.classList.remove('hidden');
+        errorBanner.classList.add('hidden');
+        if (successText && data.message) {
+          successText.textContent = data.message;
+        }
+
         form.reset();
+
+        // Clear any remaining validation error styles
+        [nameInput, emailInput, messageInput].forEach((input) => {
+          input.classList.remove('border-rose-400', 'dark:border-rose-600', 'focus:ring-rose-400');
+          input.classList.add('border-slate-300', 'dark:border-slate-700', 'focus:ring-primary-500');
+          input.removeAttribute('aria-invalid');
+        });
+
+        // Smoothly scroll banner into view if offscreen
+        successBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to submit form. Please try reaching out via direct email.');
+        // Form submission failed on the server
+        const errorMsg =
+          data.error ||
+          data.message ||
+          (data.errors && Array.isArray(data.errors) ? data.errors.join(', ') : null) ||
+          `Submission failed (HTTP ${res.status}). Please check your server or try again.`;
+        throw new Error(errorMsg);
       }
     } catch (err) {
-      console.error('Submission error:', err);
+      console.error('[Contact Form Error]', err);
+
+      let userMsg = err.message;
+      if (err.name === 'TypeError' && err.message && err.message.toLowerCase().includes('fetch')) {
+        userMsg =
+          'Could not reach the backend server at ' +
+          apiUrl +
+          '. Please ensure the Node.js server is running (npm start) or email me directly at asamoahrobert241@gmail.com.';
+      }
+
+      // Display clear error message without page reload and keep user input
       if (errorText) {
-        errorText.textContent = err.message || 'Something went wrong. Please try again or email me directly.';
+        errorText.textContent = userMsg;
       }
       errorBanner.classList.remove('hidden');
+      successBanner.classList.add('hidden');
+      errorBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } finally {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = originalBtnText;
+      submitBtn.innerHTML = originalBtnHtml;
     }
   });
 }

@@ -11,3 +11,18 @@ desktop.ini
 
 # Vercel artifacts
 .vercel
+
+# Environment variables & secrets (CRITICAL: NEVER COMMIT SECRETS)
+.env
+.env.local
+.env.*.local
+*.env
+server/.env
+server/.env.local
+
+# Dependencies
+node_modules/
+server/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

@@ -88,31 +88,41 @@ All projects displayed in the portfolio are defined in `js/projects.js`. To add 
 Open `index.html` and search for the following sections to customize:
 - **Hero Section (`#hero`)**: Update tagline or availability status.
 - **Social & Contact Links (`#contact`)**:
-  - Replace `robert.asamoah.dev@example.com` with your real email.
-  - Replace `https://github.com/robert-asamoah` with your actual GitHub profile.
-  - Replace `https://linkedin.com/in/robert-asamoah` with your LinkedIn URL.
+  - Email: `asamoahrobert241@gmail.com`
+  - Phone & WhatsApp: `+233 24 123 4567`
+  - GitHub: `https://github.com/asamoahrobert`
+  - LinkedIn: `https://linkedin.com/in/robert-asamoah`
+  - X (Twitter): `https://x.com/asamoahrobert`
+  - Instagram: `https://instagram.com/asamoahrobert`
 - **Profile Photo**: Replace the Unsplash placeholder in the About Me section with your actual photo (or drop your photo in `assets/profile.jpg` and set `src="./assets/profile.jpg"`).
 - **Resume**: Replace `assets/resume.pdf` with your actual resume PDF.
 
-### 3. Setting Up the Contact Form (Formspree or Web3Forms)
-By default, the contact form operates in **interactive demo mode** (validating input and displaying a friendly simulated success response).
+### 3. Setting Up the Contact Form (Node.js + Nodemailer + Gmail)
+The contact section connects directly to a secure Express + Nodemailer backend server (`/server`), sending real emails to your Gmail inbox with visitor `reply-to` enabled.
 
-To connect real email delivery:
+#### Step 1: Generate a Gmail App Password
+1. Go to your Google Account: [https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+2. Ensure **2-Step Verification** is turned ON.
+3. Under **App name**, type `Portfolio Contact Server` and click **Create**.
+4. Copy the generated 16-character password (e.g., `abcd efgh ijkl mnop`).
 
-#### Using Formspree (Free):
-1. Go to [https://formspree.io](https://formspree.io) and create a free account.
-2. Click **"+ New Form"** and name it "Portfolio Contact Form".
-3. Copy your unique form endpoint URL (e.g., `https://formspree.io/f/mqkvywza`).
-4. Open `js/main.js` and paste your endpoint into `CONFIG.formEndpoint`:
-   ```javascript
-   const CONFIG = {
-     formEndpoint: "https://formspree.io/f/mqkvywza",
-   };
-   ```
+#### Step 2: Configure Environment Variables
+Open `server/.env` (and root `.env`) and update:
+```env
+PORT=5000
+EMAIL_USER=asamoahrobert241@gmail.com
+EMAIL_APP_PASSWORD=abcdefghijklmnop
+TO_EMAIL=asamoahrobert241@gmail.com
+```
 
-#### Or Using Web3Forms (No Registration Required):
-1. Go to [https://web3forms.com](https://web3forms.com) and enter your email to receive a free Access Key.
-2. In `js/main.js`, set `CONFIG.formEndpoint = "https://api.web3forms.com/submit"` and pass your key in the form body.
+#### Step 3: Run the Backend Server
+In your terminal, run:
+```bash
+npm start
+```
+*(or `cd server && npm start`)*
+
+The server will start on `http://localhost:5000`. When a visitor submits the "Send a Message" form, an email is instantly delivered to your Gmail inbox, and hitting **Reply** in Gmail responds directly to the visitor!
 
 ---
 
@@ -154,6 +164,6 @@ Before sharing your portfolio with hiring managers, run through this quick check
 - [ ] **Profile Photo**: Add your headshot to `assets/` and link it in the About Me section.
 - [ ] **Resume PDF**: Replace `assets/resume.pdf` with your up-to-date resume.
 - [ ] **Projects Data**: Open `js/projects.js` and update the titles, descriptions, live demo URLs, and GitHub repository links for your 3 projects.
-- [ ] **Contact Form**: Create a free form at [formspree.io](https://formspree.io) and paste your endpoint into `js/main.js`.
+- [ ] **Contact Form**: Configure your backend in `server/.env` with your Gmail App Password and set your endpoint in `js/config.js` (see `server/README.md`).
 - [ ] **Direct Social Links**: Ensure your GitHub, LinkedIn, and email address in `index.html` point to your real accounts.
 - [ ] **Canonical URL & SEO**: Update the domain in `index.html`, `sitemap.xml`, and `robots.txt` if you connect a custom domain (e.g. `robertasamoah.dev`).
